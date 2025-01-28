@@ -3,5 +3,5 @@ Working through Richard McElreath's Statistical Rethinking Course
 
 Contents: 
 
-/Scripts: R scripts of work done in each chapter  
-/Notes: Quarto docs of notes from meetings 
+/code: R scripts of work done in each chapter  
+/notes: Quarto docs of notes from meetings 
