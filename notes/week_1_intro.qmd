@@ -24,6 +24,32 @@ RME terms:
 
 1.  Strong Inference: We come up with all the theoretical explanations for a phenomenon (i.e., hypotheses). We then create predictions that would come based on each hypothesis, and compare our observed data to the predicted. We support a hypothesis based on how closely our observed data match predictions.
 
-    1.  Corollaries: a) we always have competing hypotheses; b) we must make the predictions before we collect data, so that we don't in hindsight make our data fit a false a priori hypothesis; c)
+    1.  Corollaries: a) we always have competing hypotheses; b) we must make the predictions before we collect data, so that we don't in hindsight make our data fit a false a priori hypothesis; c) informative thing is to reject the hypothesis, rather than "proving" the correct hypothesis.
 
 2.  Bayesian Reasoning: We start with a *prior* (i.e., an expected vision or model of the world). You collect data and update your model based on the combination of the priors and the data.
+
+3.  Null-hypothesis significance testing: an application of Strong Inference, where you pick a null hypothesis as your "best hypothesis" and challenge your data to be so extraordinarily unusual that you can no longer accept the prior/null hypothesis.
+
+### Pros and cons of NHST vs Bayes
+
+**NHST:**
+
+-   Forces answers into a yes/no binary
+
+-   Absolute/arbitrary thresholds
+
+-   Artificial situations (e.g., lab experiments) lend themselves to hypothesis testing, but the effect size is not going to be informative.
+
+**Bayes:**
+
+-   We don't need a null hypothesis, we are not looking for a "yes" or "no", rather we're focused on parameter estimates (effect sizes).
+
+-   Focused on probability distributions
+
+-   Natural populations/field data, complex data with lots of confounds and limited controls, effective sizes are relevant and null hypotheses not so informative
+
+**The problem with any model:**
+
+-   Multiple processes (i.e., biological relationships) can produce similar mathematical relationships
+
+-   
