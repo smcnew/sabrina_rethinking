@@ -2,6 +2,7 @@
 title: "Rethinking notes"
 format: html
 editor: visual
+embed-resources: true
 ---
 
 ## Overview of McElreath's approach
@@ -51,5 +52,3 @@ RME terms:
 **The problem with any model:**
 
 -   Multiple processes (i.e., biological relationships) can produce similar mathematical relationships
-
--   
