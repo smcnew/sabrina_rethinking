@@ -1,0 +1,29 @@
+---
+title: "Rethinking notes"
+format: html
+editor: visual
+---
+
+## Overview of McElreath's approach
+
+### Leader: Anna Dornhaus
+
+RME terms:
+
+-   Golem: our models will not save us; the model
+
+-   Causal inference: the goal of inferring causal relationships between biological variables of interest (rather than correlation or )
+
+#### Some scientific philosophy:
+
+**Deduction** Taking a general principle and predicting what will happen in specific cases. This should be straight foward given specific mathematical models etc.
+
+**Induction** Using specific observations of particular things and infering the general principle that governs the observations we see. The challenge is there's no rules that allow us to go from observations to principles 100% of the time. This challenge means that science is hard.
+
+**Two main ways to solve the induction problem**
+
+1.  Strong Inference: We come up with all the theoretical explanations for a phenomenon (i.e., hypotheses). We then create predictions that would come based on each hypothesis, and compare our observed data to the predicted. We support a hypothesis based on how closely our observed data match predictions.
+
+    1.  Corollaries: a) we always have competing hypotheses; b) we must make the predictions before we collect data, so that we don't in hindsight make our data fit a false a priori hypothesis; c)
+
+2.  Bayesian Reasoning: We start with a *prior* (i.e., an expected vision or model of the world). You collect data and update your model based on the combination of the priors and the data.
