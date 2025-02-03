@@ -1,0 +1,254 @@
+---
+title: "Chapter_3_Exercises"
+format: html
+editor: visual
+embed-resources: true
+---
+
+```{r, warning = F, message = F}
+library(rethinking)
+library(dplyr)
+```
+
+## McElreath Chapter 3 Exercises
+
+```{r}
+# Create a grid to look at the posterior probability of p water 
+# given a sample of 6 waters in 9 tosses. 
+
+# Create a bunch of possible ps 
+p_grid <- seq( from=0 , to=1 , length.out=1000 )
+prob_p <- rep( 1 , 1000 ) # a prior 
+prob_data <- dbinom( 6 , size=9 , prob=p_grid ) # calculate likelihood
+posterior <- prob_data * prob_p #calculate posterior 
+posterior <- posterior / sum(posterior) # a vector of probabilities for each value of p 
+
+plot(posterior)
+# sample the posterior 
+set.seed(100)
+samples <- sample( p_grid , prob=posterior , size=1e4 , replace=TRUE )
+```
+3E1. How much posterior probability lies below p = 0.2?
+```{r}
+# Answer
+
+samples[samples < 0.2] |> length () / length(samples)
+
+```
+
+3E2. How much posterior probability lies above p = 0.8?
+```{r}
+samples[samples >.8] |> length () / length(samples)
+```
+
+3E3. How much posterior probability lies between p = 0.2 and p = 0.8? 
+```{r}
+samples[samples >.2 & samples < 0.8] |> length () / length(samples)
+```
+
+3E4. 20% of the posterior probability lies below which value of p?
+```{r}
+quantile(samples, 0.2)
+samples[samples < 0.52] |> length () / length(samples)
+```
+
+3E5. 20% of the posterior probability lies above which value of p?
+```{r}
+quantile(samples, 0.8)
+```
+
+3E6. Which values of p contain the narrowest interval equal to 66% of the posterior probability?
+```{r}
+HPDI(samples, prob = .66)
+```
+
+3E7. Which values of p contain 66% of the posterior probability, assuming equal posterior probabil- ity both below and above the interval?
+```{r}
+PI(samples, prob = .66)
+```
+### Medium
+
+3M1. Suppose the globe tossing data had turned out to be 8 water in 15 tosses. Construct the posterior distribution, using grid approximation. Use the same flat prior as before.
+
+```{r}
+p_grid <- seq( from=0 , to=1 , length.out=1000 )
+prob_p <- rep( 1 , 1000 ) # a prior 
+prob_data <- dbinom( 8 , size=15 , prob=p_grid ) # calculate likelihood
+posterior <- prob_data * prob_p #calculate posterior 
+posterior <- posterior / sum(posterior) # a vector of probabilities for each value of p 
+
+plot(posterior)
+
+```
+
+3M2. Draw 10,000 samples from the grid approximation from above. Then use the samples to calculate the 90% HPDI for p.
+
+```{r}
+# sample the posterior 
+set.seed(100)
+samples <- sample( p_grid , prob=posterior , size=1e4 , replace=TRUE )
+HPDI(samples, prob = 0.9)
+
+```
+
+3M3. Construct a posterior predictive check for this model and data. This means simulate the distribution of samples, averaging over the posterior uncertainty in p. What is the probability of observing 8 water in 15 tosses?
+
+```{r}
+w <- rbinom( 1e4 , size=15 , prob=samples ) # SMM note: I did not know you could do this with rbinom 
+sum(w == 8) / 10000
+
+```
+
+
+3M4. Using the posterior distribution from the 8/15 data, now calculate the probability of observing 6 water in 9 tosses 
+```{r}
+w <- rbinom( 1e4 , size=9 , prob=samples )
+sum(w == 6)/ 1e4
+
+```
+
+3M5. Start over at 3M1, but now use a prior that is zero below p= 0.5 and a  constant above p=0.5. This corresponds to prior information that a majority of the Earth’s surface is water. Repeat each problem above and compare the inferences. What difference does the better prior make? If it helps, compare inferences (using both priors) to the true value p = 0.7.
+```{r}
+p_grid <- seq( from=0 , to=1 , length.out=1000 )
+prob_p <- ifelse(p_grid < 0.5, 0, 1) # a not uniform prior 
+prob_data <- dbinom( 8 , size=15 , prob=p_grid ) # calculate likelihood
+posterior <- prob_data * prob_p #calculate posterior 
+posterior <- posterior / sum(posterior) # a vector of probabilities for each value of p 
+samples <- sample( p_grid , prob=posterior , size=1e4 , replace=TRUE )
+HPDI(samples, prob = 0.9)
+
+
+```
+Running through other checks:
+
+```{r}
+w <- rbinom( 1e4 , size=15 , prob=samples )
+sum(w == 8) / 10000
+w <- rbinom( 1e4 , size=9 , prob=samples )
+sum(w == 6)/ 1e4
+
+```
+
+3M6. Suppose you want to estimate the Earth’s proportion of water very precisely. Specifically, you want the 99% percentile interval of the posterior distribution of p to be only 0.05 wide. This means the distance between the upper and lower bound of the interval should be 0.05. How many times will you have to toss the globe to do this?
+
+```{r}
+
+# We want HPDI to have a width of 0.05 
+# let's make a function where we can quickly vary the number of ns 
+grid_post <- function(n){
+  # define grid
+  p_grid <- seq(from = 0, to = 1, length.out = 100)
+  
+  # define uniform prior
+  prior <- rep(1, 100)
+  
+  # compute likliehood at each value in the grid. We put in the arguments w and n here to calculate the probability w waters in n tosses with a p of ps. 
+  likelihood <- dbinom(trunc(.7*n), n, prob = p_grid)
+ 
+  # compute prior x liklihood
+  unstd.posterior <- likelihood*prior
+  
+  # standardize so it sums to 1 
+  posterior <- unstd.posterior / sum(unstd.posterior)
+  samples <-sample(p_grid , prob=posterior , size=1e4 , replace=TRUE)
+  interval <- HPDI(samples, prob = 0.99)
+  print(interval)
+  print(interval[2] - interval[1])
+}
+
+grid_post(100)
+grid_post(1000)
+grid_post(10000) # 10k does it
+
+```
+## Hard
+Introduction. The practice problems here all use the data below. These data indicate the gender
+(male=1, female=0) of officially reported first and second born children in 100 two-child families.
+
+```{r}
+# Data 
+birth1 <- c(1,0,0,0,1,1,0,1,0,1,0,0,1,1,0,1,1,0,0,0,1,0,0,0,1,0,
+0,0,0,1,1,1,0,1,0,1,1,1,0,1,0,1,1,0,1,0,0,1,1,0,1,0,0,0,0,0,0,0,
+1,1,0,1,0,0,1,0,0,0,1,0,0,1,1,1,1,0,1,0,1,1,1,1,1,0,0,1,0,1,1,0,
+1,0,1,1,1,0,1,1,1,1)
+birth2 <- c(0,1,0,1,0,1,1,1,0,0,1,1,1,1,1,0,0,1,1,1,0,0,1,1,1,0,
+1,1,1,0,1,1,1,0,1,0,0,1,1,1,1,0,0,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,
+1,1,1,0,1,1,0,1,1,0,1,1,1,0,0,0,0,0,0,1,0,0,0,1,1,0,0,1,0,0,1,1,
+0,0,0,1,1,1,0,0,0,0)
+```
+
+3H1. Using grid approximation, compute the posterior distribution for the probability of a birth being a boy. Assume a uniform prior probability. Which parameter value maximizes the posterior probability?
+```{r}
+# how many boys?
+sum(birth1) + sum(birth2)
+length(birth1) + length(birth2)
+
+p_grid <- seq(from = 0, to = 1, length.out = 100)
+  
+# define uniform prior
+prior <- rep(1, 100)
+  
+# compute likliehood at each value in the grid. We put in the arguments w and n here to calculate the probability w waters in n tosses with a p of ps. 
+likelihood <- dbinom(111, 200, prob = p_grid)
+ 
+  # compute prior x liklihood
+unstd.posterior <- likelihood*prior
+  
+  # standardize so it sums to 1 
+posterior <- unstd.posterior / sum(unstd.posterior)
+p_grid[which.max(posterior)]
+
+
+```
+
+3H2. Using the sample function, draw 10,000 random parameter values from the posterior distribution you calculated above. Use these samples to estimate the 50%, 89%, and 97% highest posterior density intervals.
+
+```{r}
+samples <-sample(p_grid , prob=posterior , size=1e4 , replace=TRUE)
+HPDI(samples, .5)
+HPDI(samples, .89)
+HPDI(samples, .97)
+```
+
+
+3H3. Use rbinom to simulate 10,000 replicates of 200 births. You should end up with 10,000 numbers, each one a count of boys out of 200 births. Compare the distribution of predicted numbers of boys to the actual count in the data (111 boys out of 200 births). There are many good ways to visualize the simulations, but the dens command (part of the rethinking package) is probably the easiest way in this case. Does it look like the model fits the data well? That is, does the distribution of predictions include the actual observation as a central, likely outcome?
+
+```{r}
+
+samples <- sample(p_grid, size = 10000, replace = TRUE, prob = posterior)
+simulated_dat <- rbinom(n = 10000, size = 200, prob = samples)
+dens(simulated_dat)
+
+# These data fit the data very well. 
+```
+
+
+3H4. Now compare 10,000 counts of boys from 100 simulated first borns only to the number of boys in the first births, birth1. How does the model look in this light?
+```{r}
+simulated_dat2 <- rbinom(10000, size = 100, prob = samples)
+dens(simulated_dat2)
+
+```
+3H5. The model assumes that sex of first and second births are independent. To check this assumption, focus now on second births that followed female first borns. Compare 10,000 simulated counts of boys to only those second births that followed girls. To do this correctly, you need to count the number of first borns who were girls and simulate that many births, 10,000 times. Compare the counts of boys in your simulations to the actual observed count of boys following girls. How does the model look in this light? Any guesses what is going on in these data?
+
+```{r}
+# simulate \
+# how many boys were born following girls? 
+# RM doesn't like data frames for some reason
+births <- data.frame(first = birth1, second = birth2)
+
+# how many girls were born first? Ans 49
+births %>% filter(birth1 == 0) %>% dim()
+
+# how many births were boys following girls?
+births %>% filter(first == 0, second == 1 ) %>% dim ()
+
+# 39 / 100 births were male following female births 
+
+# simulate data using our model
+g_then_b <- rbinom(10000, size = 49, prob = samples)
+dens(g_then_b)
+
+
+```
+
