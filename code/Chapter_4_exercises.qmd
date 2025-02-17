@@ -1,0 +1,200 @@
+---
+title: "Chapter_4_exercises"
+format: html
+editor: visual
+embed-resources: true
+---
+
+## Notes and Exercises from Ch. 4
+
+```{r, message= F, warning = F}
+library(dplyr)
+library(rethinking)
+```
+
+```{r}
+replicate (10000, prod(1+ runif(12,0, 0.005))) %>% dens(.,norm.comp = T)
+
+```
+
+```{r}
+# kung data 
+data(Howell1)
+d <- Howell1
+precis(d) # rethinking function to summarize vars
+d2 <- filter(Howell1, age >=18) #just adults
+
+# look at height
+dens(d2$height)
+
+
+```
+
+### making a height model
+
+We can describe the distribution of height as a function of two parameters. We then need priors for each parameter.
+
+1.  The distribution of individual heights follows a normal(Gaussian) distribution with mean = mu, and sd = sigma.\
+    *h~i~ \~ Normal(mu, sigma)*
+
+2.  The prior distribution for mu is that is follows a normal distribution with mean of 178 and sd of 20.
+
+    *mu \~ Normal (178, 20)*
+
+3.  The prior distribution of the standard ddeviation is a uniform distribution between 0 and 50
+
+    *sigma \~ Uniform (0, 50)*
+
+    smm note: why do we use a uniform prior for the sd? Just so it has to be positive?
+
+```{r}
+# Visualize the priors 
+curve(dnorm(x, 178, 20), from = 100, to = 250)
+curve(dunif(x, 0, 50), from = -10, to = 60)
+```
+
+### Next up: a prior predictive simulation
+
+Inspect our prior distribution of heights, based on the distributions of our parameters.
+
+```{r}
+# 1. Create a vector of means from our prior distribution of mu 
+sample_mu <- rnorm (1e4, 178, 20)
+#2. Create a vector of sds from our prior distribution 
+# of sigma
+sample_sigma <- runif(1e4, 0, 50)
+# Create a prior distribution of heights by sampling from these samples 
+prior_h <- rnorm(1e4, sample_mu, sample_sigma)
+dens(prior_h)
+```
+
+#### Skipping the grid approximation for the moment
+
+### Finding the posterior distribution with quap
+
+```{r}
+# Create a list of parameters 
+flist <- alist(
+  height ~ dnorm(mu, sigma),
+  mu ~ dnorm(178, 20),
+  sigma ~ dunif(0, 50)
+)
+
+# Fit the model to the data wiht quap 
+m4.1 <- quap(flist, data = d2)
+
+# look at posterior
+precis(m4.1)
+```
+
+Lets try other values for the prior and see how that changes our estimates
+
+```{r}
+# Create a list of parameters 
+flist_broad <- alist(
+  height ~ dnorm(mu, sigma),
+  mu ~ dnorm(178, 20),
+  sigma ~ dunif(0, 200)
+)
+
+flist_narrow <- alist(
+  height ~ dnorm(mu, sigma),
+  mu ~ dnorm(178, 20),
+  sigma ~ dunif(0, 10)
+)
+
+# Fit the model to the data wiht quap 
+m4.1a <- quap(flist_broad, data = d2)
+m4.1b <- quap(flist_narrow, data = d2)
+# look at posterior
+precis(m4.1a)
+precis(m4.1b)
+
+# They're quite similar.
+```
+
+#### Get the posterior distribution
+
+```{r}
+# Use the rethinking convenience function extract.samples
+
+post <- extract.samples(m4.1, n = 1e4)
+head(post)
+```
+
+### Linear prediction: adding a predictor
+
+```{r}
+plot(height ~ weight, d2) #yep, they're correlated
+```
+
+Creating the pieces of the model First, we have a basic gaussian model. Height is normally distributed with mean = mu and sd = sigma (likelihood, smm note, why?).\
+Then, we add in a linear model, saying that mu is equal to the intercept (alpha) plus the slope (beta) times x.\
+Then, we describe the priors for parameters alpha, beta, and mu.
+
+1.  The distribution of individual heights follows a normal(Gaussian) distribution with mean = mu, and sd = sigma.\
+    *h~i~ \~ Normal(mui, sigma)*
+
+2.  Mu~*i*~ is determined by the linear equation: alpha + beta(xi- xbar)
+
+3.  The prior distribution of alpha follows a normal distribution with mean of 178 and sd of 20.
+
+    *alpha \~ Normal (178, 20)*
+
+4.  The prior distribution of beta follows a normal distribution with mean of 0 and sd = 10 (SMM note: asterisk this)
+
+5.  The prior distribution of the standard deviation is a uniform distribution between 0 and 50
+
+    *sigma \~ Uniform (0, 50)*
+
+But now, let's look at how to make sensible priors
+
+```{r}
+set.seed(2971)
+N = 100
+a <- rnorm(N, 178, 20)
+b <- rnorm(N, 0, 10)
+xbar <- mean(d2$weight)
+plot(NULL, xlim = range(d2$weight), ylim = c(-100, 400), xlab = "weight", ylab = "height")
+for(i in 1:N) curve(a[i] + b[i]*(x -xbar), 
+                    from = min(d2$weight),
+                    to = max(d2$weight), 
+                    add = T,
+                    col = col.alpha("black", 0.2))
+
+```
+These are bad priors because 1) we know that the relationship is likely positive and 2) it predicts heights that are totally illogical. 
+
+How to improve? Pull B from a log normal distribution
+
+```{r}
+rlnorm(1e4, 0, 1 ) %>% dens()
+```
+
+### Finding the posterior
+```{r}
+
+xbar <- mean(d2$weight)
+
+# fit model 
+m4.3 <- quap(
+  alist(
+    height ~ dnorm(mu, sigma),
+    mu <- a + b*(weight - xbar), 
+    a ~ dnorm (170, 20),
+    b ~ dlnorm(0, 1), 
+    sigma ~ dunif(0, 50)
+  ), data = d2
+)
+precis(m4.3)
+round(vcov(m4.3),3) #???? 
+```
+Now, let's compare the models estimates to the data 
+
+```{r}
+plot(height ~ weight, d2, col = rangi2)
+post <- extract.samples(m4.3)
+curve(mean(post$a) + mean(post$b)*(x - xbar), add = TRUE)
+```
+
+ 
