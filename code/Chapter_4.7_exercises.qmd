@@ -1,0 +1,114 @@
+---
+title: "Chapter_4.7_Practice_exercises"
+format: html
+editor: visual
+embed-resources: true
+---
+
+### Chapter 4.7, end of chapter exercises. 
+
+```{r, message= F, warning = F}
+library(dplyr)
+library(rethinking)
+```
+
+4E1: In the model definition below, which line is the liklihood?  
+Answer: yi ~ Normal(mu, sigma)
+
+4E2: In the model definition just above, how many parameters 
+are in the posterior?  
+Answer: 2 
+
+4E3: Using the model definition above, write down the appropriate form of Bayes theorem that includes the proper likelihood and priors.  
+Answer: see https://xcelab.net/rmpubs/rethinking/rethinking_solutions_2.pdf but the start of it is rephrasing the model as 
+Pr(sigma and u |y)
+
+4E4: What line is the linear model?  
+mu = alpha + beta*xi
+
+4E5: How many parameters are in the posterior?  
+three.
+
+4M1: For the model definition  below, simulate observed y 
+values from the prior (not the posterior) 
+SMM note: In his answers RM uses a uniform distribution for  the sigma... why? 
+```{r}
+# model 
+# yi ~ Normal(mu, sigma)
+# mu ~ Normal(0, 10)
+# sigma ~ Exponential (1) 
+mus <- rnorm(10000, mean = 0, sd = 10)
+sigmas <- runif(n = 10000, rate =1)
+
+ys <- rnorm(10000, mean = mus, sd = sigmas)
+hist(ys)
+```
+4M2. Translate the model above into a quap formula
+```{r}
+m4M2 <- 
+    alist(
+        y ~ dnorm( mu , sigma ) ,
+        mu ~ dnorm( 0 ,10 ) ,
+        sigma ~ dunif( 0 , 10 )
+    )
+
+```
+
+4M3. Translate the quap model formula into a math definition 
+SMM note: I don't understand the translations between math and R distributions 
+```{r}
+# y ~ Normal(mu, sigma), 
+# mu <- alpha + beta*xi
+# alpha ~ Normal(0, 10)
+# beta ~ Exponential (0,1)
+# sigma ~  Uniform (1)  
+```
+
+4M4. A sample of students is measured for height for 3 years. After the 3rd year you want to fit a regression predicting height by year. Write the math model definition. 
+
+```{r}
+# heighti ~ normal(mu, sigma)
+# mui = alpha + beta * yeari
+# alpha ~ normal (100, 10) ;  say that mean in year 1 is 100, sd 10
+# beta ~ normal (0, 10) 
+# sigma ~ uniform(0, 50)
+```
+
+4M5. Every student gets taller each year- how should we change our prior? 
+```{r}
+#beta = lognormal(0, 1)
+```
+4M6.  suppose I tell you that the variance for students of the same age never gets more than 64 cm. 
+
+```{r}
+
+# Sigma ~ unif (0, 64)
+```
+
+4H1. The weights listed below were recordded but heights were not. Provide heights and 89% intervals for each individual
+
+```{r}
+# get the data 
+data(Howell1)
+dat <- Howell1 %>% filter(age > 18)
+head(dat)
+xbar <- mean(dat$weight)
+# Make the model 
+mod_height <- quap(
+  alist(
+    height ~ dnorm(mu, sigma),
+    mu <- a + b*(weight),
+    a ~ dnorm(100, 100),
+    b ~ dlnorm(0, 10),
+    sigma ~ dunif(0, 50)
+  ), data = dat
+  )
+
+# use link to predict values 
+samples <- link(mod_height, data = data.frame(weight = c(46.95, 43.72, 64.78, 32.59, 54.63)))
+
+HPDI(samples[,1], prob  = .90)
+apply(samples, 2, mean) # mean predicted values 
+apply(samples, 2, function (x)  HPDI(x, prob = 0.9)) # didnt work quote right 
+```
+
