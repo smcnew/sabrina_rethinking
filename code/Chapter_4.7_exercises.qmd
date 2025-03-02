@@ -90,7 +90,7 @@ SMM note: I don't understand the translations between math and R distributions
 ```{r}
 # get the data 
 data(Howell1)
-dat <- Howell1 %>% filter(age > 18)
+dat <- Howell1 %>% filter(age >= 18)
 head(dat)
 xbar <- mean(dat$weight)
 # Make the model 
@@ -105,10 +105,86 @@ mod_height <- quap(
   )
 
 # use link to predict values 
-samples <- link(mod_height, data = data.frame(weight = c(46.95, 43.72, 64.78, 32.59, 54.63)))
+samples <- link(mod_height, data = data.frame(weight = c(46.95, 43.72, 64.78, 32.59, 54.63)), n = 1e5)
 
-HPDI(samples[,1], prob  = .90)
 apply(samples, 2, mean) # mean predicted values 
-apply(samples, 2, function (x)  HPDI(x, prob = 0.9)) # didnt work quote right 
+apply(samples, 2, function (x)  HPDI(x, prob = 0.9))
+
+# HPDI didn't work the same as in the book. try something else? 
+
+post<- extract.samples(mod_height)
+head(post)
+y <- rnorm( 1e5 , post$a + post$b*46.95 , post$sigma )
+HPDI(y, prob = 0.9) # this gives the same answer as book
+range(y)
+range(samples[,1])
+
+```
+Ok I figured out the difference. Link pulls samples from the posterior for the three parameters that we estimated (a, b, and sigma). It then uses a and b in our linear model to predict height, assuming that our best guess of height is = a + b* weight. 
+
+The book answer incorporates sigma, and says that height is best understood as normally distributed with a mean of the linear regression, but with sd = sigma. So there's more variation in it. Confusing. 
+
+4H2. Model people under 18. 
+
+```{r}
+
+data(Howell1)
+kids <- Howell1 %>% filter(age < 18)
+head(kids)
+xbar <- mean(kids$weight)
+# find some reasonable priors
+mean(kids$weight)
+
+# Make the model, make the priors work 
+mod_height2 <- quap(
+  alist(
+    height ~ dnorm(mu, sigma),
+    mu <- a + b*(weight),
+    a ~ dnorm(18, 18),
+    b ~ dlnorm(0, 4),
+    sigma ~ dunif(0, 50)
+  ), data = kids
+  )
+
+# interpret model
+precis(mod_height2)
+
+```
+
+A). For every 10 increase in weight, height will increase by ~27 cm. 
+
+```{r}
+#B) Plot the raw data, height on the vertical, weight on # the horizonal
+
+# Get the regression line 
+link_mod <- link(mod_height2)
+head(link_mod)
+samps <- extract.samples(mod_height2)
+# extract the mean slope and mean intercept
+mean_params <- apply(samps, 2, mean)
+
+# extract the .89 interval for the mean 
+mu.PI <- apply(samps, 2, PI, prob = .89)
+
+# extract the 89% interval for predicted heights 
+
+plot(height ~ weight, data = kids, col = "lightblue")
+mapply(function(a,b) abline(a = a, b= b), samps$a[1:10], samps$b[1:10]) # Plot a bunch of lines from the posterior
+
+abline(a = mean_params[1], b = mean_params[2], col = "red") # add a red line indicating the mean regression
+
+# Get the 89% interval for the mean 
+
+
+w.seq <- seq(from=1,to=45,length.out=50)
+mu <- sapply( w.seq , function(z) mean( samps$a + samps$b*z ) )
+mu.ci <- sapply( w.seq , function(z)
+HPDI( samps$a + samps$b*z , prob=0.9 ) )
+pred.ci <- sapply( w.seq , function(z)
+HPDI( rnorm(10000,samps$a + samps$b*z,samps$sigma) , 0.9 ) )
+
+
+
+
 ```
 
